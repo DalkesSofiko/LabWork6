@@ -15,39 +15,40 @@ public class ClientApp {
 
         try (ClientNetwork network = new ClientNetwork(SERVER_HOST, SERVER_PORT)) {
             ClientConsole console = new ClientConsole(scanner);
-            System.out.println("Клиент подключён. Введите 'help' для справки.");
+            System.out.println("Client connected. Type 'help' for commands.");
 
-            boolean running = true;
-            while (running) {
+            while (true) {
                 ClientRequest request = console.readCommand();
 
                 if (request == null) {
-                    // Проверка на exit
-                    running = false;
+                    // Команда exit
+                    System.out.println("Client shutting down.");
                     break;
+                }
+
+                // Локальные команды (например, help)
+                if (request.getCommandName().equals("__local__")) {
+                    continue; // уже обработано в console.readCommand()
                 }
 
                 // Отправка на сервер
                 ServerResponse response = network.sendRequest(request);
-
                 if (response == null) {
-                    // Сервер недоступен — продолжаем цикл, клиент не падает
+                    System.err.println("Server not responding. Check if server is running.");
                     continue;
                 }
 
                 // Обработка ответа
                 if (response.getMessage() != null && !response.getMessage().isEmpty()) {
-                    System.out.println(response.isSuccess() ? "✓ " : "✗ " + response.getMessage());
+                    System.out.println(response.isSuccess() ? "✓ " + response.getMessage() : "✗ " + response.getMessage());
                 }
-
                 if (response.getData() != null && !response.getData().isEmpty()) {
                     response.getData().forEach(item -> System.out.println("  • " + item));
                 }
             }
-
-            System.out.println("Клиент завершил работу.");
         } catch (Exception e) {
-            System.err.println("Критическая ошибка клиента: " + e.getMessage());
+            System.err.println("Fatal client error: " + e.getMessage());
+            e.printStackTrace();
         } finally {
             scanner.close();
         }

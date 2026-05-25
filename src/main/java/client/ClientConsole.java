@@ -11,6 +11,7 @@ import java.util.Scanner;
 
 public class ClientConsole {
     private static final Logger logger = LogManager.getLogger(ClientConsole.class);
+    private static final String LOCAL_CMD_MARKER = "__local__"; // маркер для команд, не требующих отправки
 
     private final Scanner scanner;
 
@@ -18,10 +19,6 @@ public class ClientConsole {
         this.scanner = scanner;
     }
 
-    /**
-     * Считывает команду из консоли и формирует запрос для отправки на сервер.
-     * @return готовый ClientRequest или null, если введён "exit" или обработана локальная команда (help)
-     */
     public ClientRequest readCommand() {
         System.out.print("> ");
         String line = scanner.nextLine().trim();
@@ -31,13 +28,13 @@ public class ClientConsole {
         String cmd = parts[0].toLowerCase();
         String arg = parts.length > 1 ? parts[1] : null;
 
-        // Локальная команда help – не отправляем на сервер
+        // Локальная команда help
         if (cmd.equals("help")) {
             printHelp();
-            return null;
+            return new ClientRequest(LOCAL_CMD_MARKER);
         }
 
-        // Команда exit – завершение клиента (без отправки)
+        // Команда exit – завершение клиента
         if (cmd.equals("exit")) {
             logger.info("Получена команда exit, завершение клиента");
             return null;
@@ -52,8 +49,8 @@ public class ClientConsole {
         // Команды с аргументом-строкой (ID)
         if (cmd.equals("remove_key")) {
             if (arg == null || arg.isEmpty()) {
-                System.out.println("Ошибка: укажите ID для удаления");
-                logger.warn("remove_key без аргумента");
+                System.out.println("Error: specify ID to remove");
+                logger.warn("remove_key without argument");
                 return null;
             }
             logger.debug("Команда remove_key с аргументом: {}", arg);
@@ -69,46 +66,43 @@ public class ClientConsole {
                 return new ClientRequest(cmd, org);
             } catch (InputCancelledException e) {
                 logger.info("Ввод организации отменён пользователем");
-                System.out.println("Ввод отменён.");
+                System.out.println("Input cancelled.");
                 return null;
             } catch (Exception e) {
                 logger.error("Ошибка при вводе организации: {}", e.getMessage(), e);
-                System.err.println("Ошибка ввода: " + e.getMessage());
+                System.err.println("Input error: " + e.getMessage());
                 return null;
             }
         }
 
-        // Команда server_save (только для сервера)
+        // Команда server_save
         if (cmd.equals("server_save")) {
             logger.debug("Команда server_save");
             return new ClientRequest(cmd);
         }
 
         logger.warn("Неизвестная команда: {}", cmd);
-        System.out.println("Неизвестная команда. Введите 'help'.");
+        System.out.println("Unknown command. Type 'help'.");
         return null;
     }
 
-    /**
-     * Считывает данные для новой организации через InputHelper.
-     */
     private Organization readOrganization() {
         Organization org = new Organization();
 
-        System.out.println("=== Ввод организации (введите 'отмена' для отмены) ===");
+        System.out.println("=== Enter organization data (type 'cancel' to abort) ===");
 
-        org.setName(InputHelper.readString(scanner, "Название: ", false));
+        org.setName(InputHelper.readString(scanner, "Name: ", false));
 
-        long x = InputHelper.readLong(scanner, "Координата X (> -410): ", -410, null);
-        double y = InputHelper.readDouble(scanner, "Координата Y: ");
+        long x = InputHelper.readLong(scanner, "Coordinate X (> -410): ", -410, null);
+        double y = InputHelper.readDouble(scanner, "Coordinate Y: ");
         org.setCoordinates(new models.Coordinates(x, y));
 
-        org.setAnnualTurnover(InputHelper.readLong(scanner, "Годовой оборот (> 0): ", 0, null));
-        org.setFullName(InputHelper.readString(scanner, "Полное название: ", true));
+        org.setAnnualTurnover(InputHelper.readLong(scanner, "Annual turnover (> 0): ", 0, null));
+        org.setFullName(InputHelper.readString(scanner, "Full name (optional): ", true));
 
-        org.setType(InputHelper.readEnum(scanner, "Тип организации (или пустая строка): ", models.OrganizationType.class));
+        org.setType(InputHelper.readEnum(scanner, "Organization type (or empty): ", models.OrganizationType.class));
 
-        String street = InputHelper.readString(scanner, "Улица адреса: ", true);
+        String street = InputHelper.readString(scanner, "Street address (optional): ", true);
         org.setPostalAddress(new models.Address(street));
 
         return org;
@@ -116,18 +110,18 @@ public class ClientConsole {
 
     public void printHelp() {
         System.out.println("""
-            Доступные команды:
-            help                       — показать эту справку
-            info                       — информация о коллекции
-            show                       — показать все элементы (отсортировано по имени)
-            insert                     — добавить новый элемент
-            remove_key {id}            — удалить элемент по ID
-            clear                      — очистить коллекцию
-            server_save                — сохранить коллекцию на сервере
-            history                    — показать историю команд (на сервере)
-            exit                       — завершить работу клиента
-            Ввод 'отмена' или 'cancel' на любом этапе отменяет текущую команду.
+            Available commands:
+            help                       – show this help
+            info                       – display collection info
+            show                       – show all elements (sorted by name)
+            insert                     – add a new element
+            remove_key {id}            – remove element by ID
+            clear                      – clear the collection
+            server_save                – save collection on server
+            history                    – show command history (server-side)
+            exit                       – exit client
+            Enter 'cancel' at any prompt to abort input.
             """);
-        logger.debug("Выведена справка по командам");
+        logger.debug("Help printed");
     }
 }
