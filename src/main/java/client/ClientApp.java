@@ -5,23 +5,29 @@ import shared.ServerResponse;
 import java.util.Scanner;
 
 public class ClientApp {
-    // Значения по умолчанию
     private static final String DEFAULT_HOST = "localhost";
     private static final int DEFAULT_PORT = 5000;
 
     public static void main(String[] args) {
-        // Парсим аргументы командной строки
         String host = DEFAULT_HOST;
         int port = DEFAULT_PORT;
 
-        if (args.length >= 1) {
-            host = args[0];
-        }
-        if (args.length >= 2) {
+        if (args.length > 0) {
+            // Если первый аргумент похож на число (порт), то хост оставляем localhost
             try {
-                port = Integer.parseInt(args[1]);
+                port = Integer.parseInt(args[0]);
+                // Если успешно, то это порт, хост не меняем
             } catch (NumberFormatException e) {
-                System.err.println("Некорректный порт, используется значение по умолчанию: " + DEFAULT_PORT);
+                // Иначе это хост
+                host = args[0];
+                // Если есть второй аргумент, то это порт
+                if (args.length > 1) {
+                    try {
+                        port = Integer.parseInt(args[1]);
+                    } catch (NumberFormatException ex) {
+                        System.err.println("Некорректный порт, используется " + DEFAULT_PORT);
+                    }
+                }
             }
         }
 
