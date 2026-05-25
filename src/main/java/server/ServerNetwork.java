@@ -2,12 +2,17 @@ package server;
 
 import shared.ClientRequest;
 import shared.ServerResponse;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.io.*;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 
 public class ServerNetwork {
+    private static final Logger logger = LogManager.getLogger(ServerNetwork.class);
+
     private final DatagramChannel channel;
     private final CommandProcessor processor;
     private volatile boolean running = true;
@@ -17,31 +22,67 @@ public class ServerNetwork {
         this.channel.configureBlocking(false); // Неблокирующий режим
         this.channel.bind(new InetSocketAddress(port));
         this.processor = processor;
+        logger.info("Сетевой модуль инициализирован на порту {}", port);
     }
 
-    public void start() throws IOException, ClassNotFoundException, InterruptedException {
+    public void start() {
         ByteBuffer buffer = ByteBuffer.allocate(65535);
-        System.out.println(" Сервер запущен на порту " + channel.getLocalAddress());
+        logger.info("Сервер запущен и ожидает запросы на порту {}", channel.socket().getLocalPort());
 
         while (running) {
-            buffer.clear();
-            SocketAddress clientAddr = channel.receive(buffer);
+            try {
+                buffer.clear();
+                SocketAddress clientAddr = channel.receive(buffer);
 
-            if (clientAddr != null) { // Данные есть
-                buffer.flip();
-                ClientRequest request = deserialize(buffer);
-                ServerResponse response = processor.process(request);
+                if (clientAddr != null) {
+                    logger.debug("Получен UDP-пакет от {}", clientAddr);
+                    buffer.flip();
 
-                // Если команда сохранения, сохраняем файл, тут пусто, т.к все уже есть в request.getCommandName()
-                if ("server_save".equals(request.getCommandName())) {}
+                    ClientRequest request = deserialize(buffer);
+                    logger.info("Получена команда '{}' от {}", request.getCommandName(), clientAddr);
 
-                channel.send(serialize(response), clientAddr);
+                    ServerResponse response = processor.process(request);
+                    logger.debug("Ответ для {}: success={}", clientAddr, response.isSuccess());
+
+                    channel.send(serialize(response), clientAddr);
+                    logger.info("Ответ отправлен клиенту {}", clientAddr);
+                }
+
+                // Небольшая задержка для снижения нагрузки на CPU в холостом цикле
+                Thread.sleep(10);
+
+            } catch (InterruptedException e) {
+                logger.warn("Цикл приёма прерван", e);
+                Thread.currentThread().interrupt();
+                break;
+            } catch (IOException e) {
+                logger.error("Ошибка ввода-вывода в сетевом цикле: {}", e.getMessage(), e);
+            } catch (ClassNotFoundException e) {
+                logger.error("Ошибка десериализации запроса: {}", e.getMessage(), e);
+            } catch (Exception e) {
+                logger.error("Неожиданная ошибка в сетевом модуле: {}", e.getMessage(), e);
             }
-            Thread.sleep(10);
         }
+
+        logger.info("Сетевой модуль остановлен");
+        close();
     }
 
-    public void stop() { running = false; }
+    public void stop() {
+        logger.info("Получен сигнал остановки сети");
+        running = false;
+    }
+
+    private void close() {
+        try {
+            if (channel != null && channel.isOpen()) {
+                channel.close();
+                logger.debug("Канал DatagramChannel закрыт");
+            }
+        } catch (IOException e) {
+            logger.error("Ошибка при закрытии канала: {}", e.getMessage(), e);
+        }
+    }
 
     private ClientRequest deserialize(ByteBuffer buffer) throws IOException, ClassNotFoundException {
         byte[] bytes = new byte[buffer.remaining()];

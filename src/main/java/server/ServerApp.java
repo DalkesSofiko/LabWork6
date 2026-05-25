@@ -1,33 +1,50 @@
 package server;
 
 import models.Organization;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.HashMap;
 
 public class ServerApp {
+    private static final Logger logger = LogManager.getLogger(ServerApp.class);
+
     public static void main(String[] args) {
-        String filePath = args.length > 0 ? args[0] : "data.xml";
+        // Парсинг аргументов: [путь_к_файлу] [порт]
+        String filePath = (args.length > 0 && !args[0].isEmpty()) ? args[0] : "data.xml";
         int port = 5000;
+        if (args.length > 1) {
+            try {
+                port = Integer.parseInt(args[1]);
+            } catch (NumberFormatException e) {
+                logger.warn("Некорректный порт, используется значение по умолчанию: {}", port);
+            }
+        }
+        logger.info("Запуск сервера с параметрами: файл = {}, порт = {}", filePath, port);
 
         // Загрузка коллекции
         CollectionFileHandler fileHandler = new CollectionFileHandler(filePath);
         HashMap<Integer, Organization> collection = fileHandler.loadCollection();
         int nextId = collection.keySet().stream().mapToInt(i -> i).max().orElse(0) + 1;
+        logger.info("Коллекция загружена. Элементов: {}, следующий ID: {}", collection.size(), nextId);
 
         // Инициализация обработчика
         CommandProcessor processor = new CommandProcessor(collection, nextId, fileHandler);
 
-        // Автосохранение при завершении
+        // Хук для автосохранения при завершении (Ctrl+C)
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("Завершение работы сервера. Сохранение коллекции...");
+            logger.info("Получен сигнал завершения. Сохранение коллекции...");
             fileHandler.saveCollection(collection);
+            logger.info("Коллекция сохранена. Сервер останавливается.");
         }));
 
-        // 4. Запуск сети
+        // Запуск сетевого модуля
         try {
             ServerNetwork network = new ServerNetwork(port, processor);
             network.start();
         } catch (Exception e) {
-            System.err.println("Критическая ошибка сервера: " + e.getMessage());
+            logger.error("Критическая ошибка сервера: {}", e.getMessage(), e);
+            System.exit(1);
         }
     }
 }

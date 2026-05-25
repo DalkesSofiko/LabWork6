@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+        <!-- Консольный вывод -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%-5level] %logger{36} - %msg%n"/>
+        </Console>
+
+        <!-- Файловый лог (сервер) -->
+        <File name="ServerLog" fileName="logs/server.log" append="true">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%-5level] %logger{36} - %msg%n"/>
+        </File>
+
+        <!-- Файловый лог (клиент, опционально) -->
+        <File name="ClientLog" fileName="logs/client.log" append="true">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%-5level] %logger{36} - %msg%n"/>
+        </File>
+    </Appenders>
+
+    <Loggers>
+        <!-- Логи нашего приложения -->
+        <Logger name="server" level="debug" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="ServerLog"/>
+        </Logger>
+        <Logger name="client" level="debug" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="ClientLog"/>
+        </Logger>
+
+        <!-- Корневой логгер -->
+        <Root level="info">
+            <AppenderRef ref="Console"/>
+        </Root>
+    </Loggers>
+</Configuration>

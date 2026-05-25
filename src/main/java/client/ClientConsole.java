@@ -3,9 +3,15 @@ package client;
 import models.Organization;
 import shared.ClientRequest;
 import client.utils.InputHelper;
+import client.utils.InputHelper.InputCancelledException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.Scanner;
 
 public class ClientConsole {
+    private static final Logger logger = LogManager.getLogger(ClientConsole.class);
+
     private final Scanner scanner;
 
     public ClientConsole(Scanner scanner) {
@@ -26,23 +32,35 @@ public class ClientConsole {
         String arg = parts.length > 1 ? parts[1] : null;
 
         // Команды без аргументов
-        if (cmd.equals("exit")) return null; // Сигнал на завершение
+        if (cmd.equals("exit")) {
+            logger.info("Получена команда exit, завершение клиента");
+            return null; // Сигнал на завершение
+        }
         if (cmd.equals("help") || cmd.equals("info") || cmd.equals("show") ||
                 cmd.equals("clear") || cmd.equals("history")) {
+            logger.debug("Команда без аргументов: {}", cmd);
             return new ClientRequest(cmd);
         }
 
         // Команды с аргументом-строкой (ID)
         if (cmd.equals("remove_key")) {
+            logger.debug("Команда remove_key с аргументом: {}", arg);
             return new ClientRequest(cmd, arg);
         }
 
         // Команда insert: читаем объект организации
         if (cmd.equals("insert")) {
+            logger.debug("Начало ввода новой организации");
             try {
                 Organization org = readOrganization();
+                logger.info("Организация успешно введена: {}", org.getName());
                 return new ClientRequest(cmd, org);
+            } catch (InputCancelledException e) {
+                logger.info("Ввод организации отменён пользователем");
+                System.out.println("Ввод отменён.");
+                return null;
             } catch (Exception e) {
+                logger.error("Ошибка при вводе организации: {}", e.getMessage(), e);
                 System.err.println("Ошибка ввода: " + e.getMessage());
                 return null;
             }
@@ -50,9 +68,11 @@ public class ClientConsole {
 
         // Команда server_save (только для сервера, но клиент может отправить)
         if (cmd.equals("server_save")) {
+            logger.debug("Команда server_save");
             return new ClientRequest(cmd);
         }
 
+        logger.warn("Неизвестная команда: {}", cmd);
         System.out.println("Неизвестная команда. Введите 'help'.");
         return null;
     }
@@ -96,5 +116,6 @@ public class ClientConsole {
             exit                       — завершить работу клиента
             Ввод 'отмена' или 'cancel' на любом этапе отменяет текущую команду.
             """);
+        logger.debug("Выведена справка по командам");
     }
 }
