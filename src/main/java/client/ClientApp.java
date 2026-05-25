@@ -10,6 +10,8 @@ public class ClientApp {
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
+        System.setOut(new java.io.PrintStream(System.out, true, java.nio.charset.StandardCharsets.UTF_8));
+        System.setErr(new java.io.PrintStream(System.err, true, java.nio.charset.StandardCharsets.UTF_8));
 
         try (ClientNetwork network = new ClientNetwork(SERVER_HOST, SERVER_PORT)) {
             ClientConsole console = new ClientConsole(scanner);

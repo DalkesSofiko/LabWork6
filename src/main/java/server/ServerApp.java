@@ -7,9 +7,14 @@ import org.apache.logging.log4j.Logger;
 import java.util.HashMap;
 
 public class ServerApp {
+
     private static final Logger logger = LogManager.getLogger(ServerApp.class);
 
     public static void main(String[] args) {
+
+        System.setOut(new java.io.PrintStream(System.out, true, java.nio.charset.StandardCharsets.UTF_8));
+        System.setErr(new java.io.PrintStream(System.err, true, java.nio.charset.StandardCharsets.UTF_8));
+
         // Парсинг аргументов: [путь_к_файлу] [порт]
         String filePath = (args.length > 0 && !args[0].isEmpty()) ? args[0] : "data.xml";
         int port = 5000;
