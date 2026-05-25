@@ -1,34 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="WARN">
     <Appenders>
-        <!-- Консольный вывод -->
+        <!-- Консольный вывод: только INFO и выше -->
         <Console name="Console" target="SYSTEM_OUT">
             <PatternLayout pattern="%d{HH:mm:ss.SSS} [%-5level] %logger{36} - %msg%n"/>
+            <ThresholdFilter level="INFO" onMatch="ACCEPT" onMismatch="DENY"/>
         </Console>
 
-        <!-- Файловый лог (сервер) -->
+        <!-- Файловый лог сервера (полный DEBUG) -->
         <File name="ServerLog" fileName="logs/server.log" append="true">
             <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%-5level] %logger{36} - %msg%n"/>
         </File>
 
-        <!-- Файловый лог (клиент, опционально) -->
+        <!-- Файловый лог клиента (полный DEBUG) -->
         <File name="ClientLog" fileName="logs/client.log" append="true">
             <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%-5level] %logger{36} - %msg%n"/>
         </File>
     </Appenders>
 
     <Loggers>
-        <!-- Логи нашего приложения -->
+        <!-- Сервер: в консоль только INFO+, в файл всё DEBUG+ -->
         <Logger name="server" level="debug" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="ServerLog"/>
         </Logger>
+
+        <!-- Клиент: в консоль только INFO+, в файл всё DEBUG+ -->
         <Logger name="client" level="debug" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="ClientLog"/>
         </Logger>
 
-        <!-- Корневой логгер -->
+        <!-- Корневой логгер (используется для остальных пакетов) -->
         <Root level="info">
             <AppenderRef ref="Console"/>
         </Root>

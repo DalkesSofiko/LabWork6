@@ -20,7 +20,7 @@ public class ClientConsole {
 
     /**
      * Считывает команду из консоли и формирует запрос для отправки на сервер.
-     * @return готовый ClientRequest или null, если введён "exit"
+     * @return готовый ClientRequest или null, если введён "exit" или обработана локальная команда (help)
      */
     public ClientRequest readCommand() {
         System.out.print("> ");
@@ -31,19 +31,31 @@ public class ClientConsole {
         String cmd = parts[0].toLowerCase();
         String arg = parts.length > 1 ? parts[1] : null;
 
-        // Команды без аргументов
+        // Локальная команда help – не отправляем на сервер
+        if (cmd.equals("help")) {
+            printHelp();
+            return null;
+        }
+
+        // Команда exit – завершение клиента (без отправки)
         if (cmd.equals("exit")) {
             logger.info("Получена команда exit, завершение клиента");
-            return null; // Сигнал на завершение
+            return null;
         }
-        if (cmd.equals("help") || cmd.equals("info") || cmd.equals("show") ||
-                cmd.equals("clear") || cmd.equals("history")) {
+
+        // Команды без аргументов (отправляются на сервер)
+        if (cmd.equals("info") || cmd.equals("show") || cmd.equals("clear") || cmd.equals("history")) {
             logger.debug("Команда без аргументов: {}", cmd);
             return new ClientRequest(cmd);
         }
 
         // Команды с аргументом-строкой (ID)
         if (cmd.equals("remove_key")) {
+            if (arg == null || arg.isEmpty()) {
+                System.out.println("Ошибка: укажите ID для удаления");
+                logger.warn("remove_key без аргумента");
+                return null;
+            }
             logger.debug("Команда remove_key с аргументом: {}", arg);
             return new ClientRequest(cmd, arg);
         }
@@ -66,7 +78,7 @@ public class ClientConsole {
             }
         }
 
-        // Команда server_save (только для сервера, но клиент может отправить)
+        // Команда server_save (только для сервера)
         if (cmd.equals("server_save")) {
             logger.debug("Команда server_save");
             return new ClientRequest(cmd);
@@ -111,8 +123,8 @@ public class ClientConsole {
             insert                     — добавить новый элемент
             remove_key {id}            — удалить элемент по ID
             clear                      — очистить коллекцию
-            server_save                — сохранить коллекцию на сервере (только сервер)
-            history                    — показать историю команд
+            server_save                — сохранить коллекцию на сервере
+            history                    — показать историю команд (на сервере)
             exit                       — завершить работу клиента
             Ввод 'отмена' или 'cancel' на любом этапе отменяет текущую команду.
             """);
